@@ -16,15 +16,15 @@ model User {
 }
 
 model Employee {
-  id           Int           @id @default(autoincrement())
-  idNo         String?       @unique
+  id           Int          @id @default(autoincrement())
   name         String
   role         String
   salaryType   SalaryType
   salaryAmount Float
+  createdAt    DateTime     @default(now())
+  idNo         String?      @unique
   password     String?
   attendance   Attendance[]
-  createdAt    DateTime      @default(now())
 }
 
 model Attendance {
@@ -37,7 +37,6 @@ model Attendance {
 
 enum SalaryType {
   DAILY
-  MONTHLY
 }
 
 enum AttendanceStatus {

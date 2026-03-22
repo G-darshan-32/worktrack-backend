@@ -22,28 +22,15 @@ export const getSalarySummary = async (req, res, next) => {
     const month = req.query.month;
     const range = getMonthRange(month);
 
-    const employee = await prisma.employee.findUnique({
-      where: { id: employeeId }
-    });
-
-    if (!employee) {
-      return res.status(404).json({ message: "Employee not found" });
-    }
+    const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+    if (!employee) return res.status(404).json({ message: "Employee not found" });
 
     const where = { employeeId, status: "PRESENT" };
-    if (range) {
-      where.date = { gte: range.startDate, lte: range.endDate };
-    }
+    if (range) where.date = { gte: range.startDate, lte: range.endDate };
 
     const attendance = await prisma.attendance.findMany({ where });
     const presentDays = attendance.length;
-    let totalSalary = 0;
-
-    if (employee.salaryType === "DAILY") {
-      totalSalary = employee.salaryAmount * presentDays;
-    } else {
-      totalSalary = employee.salaryAmount;
-    }
+    const totalSalary = employee.salaryAmount * presentDays;
 
     const now = new Date();
     const monthLabel = month || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -53,8 +40,7 @@ export const getSalarySummary = async (req, res, next) => {
       idNo: employee.idNo,
       name: employee.name,
       role: employee.role,
-      salaryType: employee.salaryType,
-      salaryAmount: employee.salaryAmount,
+      perDaySalary: employee.salaryAmount,
       presentDays,
       totalSalary,
       month: monthLabel
@@ -66,47 +52,30 @@ export const getSalarySummary = async (req, res, next) => {
 
 export const getAllSalarySummaries = async (req, res, next) => {
   try {
-    const month = req.query.month || (() => {
-      const d = new Date();
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    })();
+    const now = new Date();
+    const month = req.query.month || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     const range = getMonthRange(month);
 
-    const employees = await prisma.employee.findMany({
-      orderBy: { name: "asc" }
-    });
+    const employees = await prisma.employee.findMany({ orderBy: { name: "asc" } });
 
-    const summaries = [];
-
-    for (const employee of employees) {
+    const summaries = await Promise.all(employees.map(async (employee) => {
       const where = { employeeId: employee.id, status: "PRESENT" };
-      if (range) {
-        where.date = { gte: range.startDate, lte: range.endDate };
-      }
+      if (range) where.date = { gte: range.startDate, lte: range.endDate };
       const attendance = await prisma.attendance.findMany({ where });
       const presentDays = attendance.length;
-      let totalSalary = 0;
-      if (employee.salaryType === "DAILY") {
-        totalSalary = employee.salaryAmount * presentDays;
-      } else {
-        totalSalary = employee.salaryAmount;
-      }
-      summaries.push({
+      const totalSalary = employee.salaryAmount * presentDays;
+      return {
         employeeId: employee.id,
         idNo: employee.idNo,
         name: employee.name,
         role: employee.role,
-        salaryType: employee.salaryType,
-        salaryAmount: employee.salaryAmount,
+        perDaySalary: employee.salaryAmount,
         presentDays,
         totalSalary
-      });
-    }
+      };
+    }));
 
-    const now = new Date();
-    const monthLabel = month || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-
-    return res.json({ month: monthLabel, summaries });
+    return res.json({ month, summaries });
   } catch (err) {
     return next(err);
   }

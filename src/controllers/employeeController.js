@@ -34,9 +34,9 @@ export const createEmployee = async (req, res, next) => {
       return res.status(400).json({ message: "Employee ID already in use" });
     }
 
-    if (!["DAILY", "MONTHLY"].includes(salaryType)) {
+    if (!["DAILY"].includes(salaryType)) {
       return res.status(400).json({
-        message: "salaryType must be DAILY or MONTHLY"
+        message: "salaryType must be DAILY"
       });
     }
 
@@ -112,9 +112,9 @@ export const updateEmployee = async (req, res, next) => {
     if (name != null) data.name = name;
     if (role != null) data.role = role;
     if (salaryType != null) {
-      if (!["DAILY", "MONTHLY"].includes(salaryType)) {
+      if (!["DAILY"].includes(salaryType)) {
         return res.status(400).json({
-          message: "salaryType must be DAILY or MONTHLY"
+          message: "salaryType must be DAILY"
         });
       }
       data.salaryType = salaryType;
